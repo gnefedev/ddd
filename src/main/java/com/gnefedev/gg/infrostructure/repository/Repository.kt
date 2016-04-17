@@ -12,10 +12,10 @@ import javax.annotation.PostConstruct
 /**
  * Created by SBT-Nefedev-GV on 15.04.2016.
  */
-abstract class Repository<T : RootEntity> {
+abstract class Repository<T : RootEntity<*, *>> {
     @Autowired
     private lateinit var ignite: Ignite
-    protected lateinit var cache: IgniteCache<Long, T>
+    private lateinit var cache: IgniteCache<Long, T>
     private lateinit var sequence: IgniteAtomicSequence
 
     @PostConstruct
@@ -33,18 +33,18 @@ abstract class Repository<T : RootEntity> {
     internal abstract fun entityClass(): Class<T>
 
     fun save(entity: T): T {
-        if (entity.id == -1L) {
-            entity.id = sequence.andIncrement
+        if (entity.id.id == -1L) {
+            entity.id.id = sequence.andIncrement
         }
-        cache.put(entity.id, entity)
+        cache.put(entity.id.id, entity)
         return entity
     }
 
-    fun get(id: Long): T {
-        return cache.get(id)?:throw NoSuchObject()
+    fun get(id: EntityId<T>): T {
+        return cache.get(id.id)?:throw NoSuchObject()
     }
 
     fun remove(entity: T) {
-        cache.remove(entity.id)
+        cache.remove(entity.id.id)
     }
 }

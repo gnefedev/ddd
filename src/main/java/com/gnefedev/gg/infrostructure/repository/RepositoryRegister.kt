@@ -12,15 +12,15 @@ import java.util.HashMap
 object RepositoryRegister {
 
     @Autowired
-    fun registerRepositories(repositories: List<Repository<out RootEntity>>) {
+    fun registerRepositories(repositories: List<Repository<out RootEntity<*,*>>>) {
         for (repository in repositories) {
             register.put(repository.entityClass(), repository)
         }
     }
 
-    private val register = HashMap<Class<out RootEntity>, Repository<out RootEntity>>()
+    private val register = HashMap<Class<out RootEntity<*,*>>, Repository<out RootEntity<*,*>>>()
     @JvmStatic
-    fun <T : RootEntity> repository(clazz: Class<T>): Repository<T> {
+    fun <T : RootEntity<T,EntityId<T>>> repository(clazz: Class<T>): Repository<T> {
         @Suppress("UNCHECKED_CAST")
         val repository = register[clazz] as Repository<T>
         return repository

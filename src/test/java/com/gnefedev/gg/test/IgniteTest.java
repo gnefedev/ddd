@@ -1,6 +1,7 @@
 package com.gnefedev.gg.test;
 
 import com.gnefedev.gg.config.GGConfig;
+import com.gnefedev.gg.infrostructure.repository.EntityId;
 import com.gnefedev.gg.infrostructure.repository.NoSuchObject;
 import com.gnefedev.gg.infrostructure.repository.RepositoryRegister;
 import com.gnefedev.gg.user.UserRepository;
@@ -30,7 +31,7 @@ public class IgniteTest {
     private UserRepository userRepository;
     @Autowired
     private PlatformTransactionManager transactionManager;
-    private static long userId;
+    private static EntityId<User> userId;
 
     @Test
     public void crud() {
@@ -65,7 +66,7 @@ public class IgniteTest {
         assertEquals(
                 "Ivan Ivanov",
                 RepositoryRegister
-                        .repository(user.getClass())
+                        .repository(User.class)
                         .get(user.getId())
                         .getName()
         );
@@ -77,7 +78,7 @@ public class IgniteTest {
         User user = new User();
         user.setName("Ivan Ivanov");
         userRepository.save(user);
-        long userId = user.getId();
+        EntityId<User> userId = user.getId();
         assertNotEquals(-1, userId);
 
         transactionManager.rollback(transaction);
