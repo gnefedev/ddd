@@ -13,16 +13,13 @@ object RepositoryRegister {
 
     @Autowired
     fun registerRepositories(repositories: List<Repository<out RootEntity<*,*>>>) {
-        for (repository in repositories) {
-            register.put(repository.entityClass(), repository)
-        }
+        repositories.forEach { register.put(it.entityClass(), it) }
     }
 
-    private val register = HashMap<Class<out RootEntity<*,*>>, Repository<out RootEntity<*,*>>>()
+    private val register: MutableMap<Class<out RootEntity<*, *>>, Repository<out RootEntity<*, *>>> = HashMap()
     @JvmStatic
     fun <T : RootEntity<T,EntityId<T>>> repository(clazz: Class<T>): Repository<T> {
         @Suppress("UNCHECKED_CAST")
-        val repository = register[clazz] as Repository<T>
-        return repository
+        return register[clazz] as Repository<T>
     }
 }
