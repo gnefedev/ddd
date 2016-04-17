@@ -1,7 +1,6 @@
 package com.gnefedev.gg.user;
 
 import com.gnefedev.gg.infrostructure.repository.RepositoryForJava;
-import com.gnefedev.gg.user.model.User;
 import org.springframework.stereotype.Component;
 
 import java.util.List;

@@ -2,23 +2,18 @@ package com.gnefedev.gg.infrostructure.repository
 
 import com.gnefedev.gg.infrostructure.repository.exception.NoSuchObject
 import com.gnefedev.gg.infrostructure.repository.exception.NoTransactionInActive
-import com.gnefedev.gg.user.model.User
 import org.apache.ignite.Ignite
 import org.apache.ignite.IgniteAtomicSequence
 import org.apache.ignite.IgniteCache
 import org.apache.ignite.cache.CacheAtomicityMode
-import org.apache.ignite.cache.query.QueryCursor
 import org.apache.ignite.cache.query.SqlQuery
 import org.apache.ignite.configuration.CacheConfiguration
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.support.TransactionSynchronizationAdapter
 import org.springframework.transaction.support.TransactionSynchronizationManager
-import sun.org.mozilla.javascript.tools.idswitch.FileBody
 import java.util.*
-
 import javax.annotation.PostConstruct
-import javax.cache.Cache
 
 /**
  * Created by SBT-Nefedev-GV on 15.04.2016.
