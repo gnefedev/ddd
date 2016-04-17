@@ -32,33 +32,35 @@ abstract class Repository<T : RootEntity<*, *>> {
     private lateinit var sequence: IgniteAtomicSequence
 
     private class CacheProxy<T>(val cache: IgniteCache<Long, T>) {
-        private val register: MutableMap<Long, T> = HashMap()
+        var register: MutableMap<Long, T> = HashMap()
         fun put(id: Long, entity: T) {
             if (!register.containsKey(id)) {
                 register[id] = entity
-                TransactionSynchronizationManager.registerSynchronization(
-                        object : TransactionSynchronizationAdapter() {
-                            override fun afterCompletion(status: Int) {
-                                register.remove(id)
-                            }
-                        }
-                )
             }
             cache.put(id, entity)
         }
+
         fun get(id: Long): T? {
             return register.getOrPut(id) {
                 cache.get(id)
             }
         }
+
         fun remove(id: Long): Boolean {
             register.remove(id)
             return cache.remove(id);
         }
 
-        fun query(args: SqlQuery<Long, T>): QueryCursor<Cache.Entry<Long, T>> {
-            val query = cache.query(args)
-            return query;
+        fun getList(query: SqlQuery<Long, T>): List<T> {
+            val cursor = cache.query(query)
+            try {
+                return cursor
+                        .map {
+                            register.getOrPut(it.key) { it.value }
+                        }
+            } finally {
+                cursor.close()
+            }
         }
     }
 
@@ -81,16 +83,22 @@ abstract class Repository<T : RootEntity<*, *>> {
             transactionManager.rollback(transaction)
             throw NoTransactionInActive();
         }
+        TransactionSynchronizationManager.registerSynchronization(
+                object : TransactionSynchronizationAdapter() {
+                    override fun afterCompletion(status: Int) {
+                        cache.register = HashMap()
+                    }
+                }
+        )
         return body();
     }
 
-    fun save(entity: T): T {
+    fun save(entity: T) {
         inTransaction {
             if (!entity.saved) {
                 entity.id.id = sequence.andIncrement
             }
             cache.put(entity.id.id, entity)
-            return entity
         }
     }
 
@@ -109,12 +117,7 @@ abstract class Repository<T : RootEntity<*, *>> {
     protected fun getListByQuery(sqlQuery: String, vararg args: String): List<T> {
         inTransaction {
             val sql: SqlQuery<Long, T> = SqlQuery(entityClass(), sqlQuery);
-            val cursor = cache.query(sql.setArgs(args))
-            try {
-                return cursor.map { it.value }
-            } finally {
-                cursor.close()
-            }
+            return cache.getList(sql.setArgs(args))
         }
     }
 }

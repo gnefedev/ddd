@@ -152,13 +152,18 @@ public class IgniteTest {
     @Test
     public void sqlQuery() {
         TransactionStatus transaction = transactionManager.getTransaction(null);
-        userRepository.save(new User("Ivan", "Ivanov"));
+        User ivan = new User("Ivan", "Ivanov");
+        userRepository.save(ivan);
         userRepository.save(new User("Petr", "Ivanov"));
         transactionManager.commit(transaction);
 
         transaction = transactionManager.getTransaction(null);
+        ivan = userRepository.get(ivan.getId());
+
         List<User> users = userRepository.findByFamilyName("Ivanov");
         assertEquals(2, users.size());
+        assertEquals("Ivan", users.get(0).getName());
+        assertTrue(ivan == users.get(0));
         transactionManager.commit(transaction);
     }
 }
