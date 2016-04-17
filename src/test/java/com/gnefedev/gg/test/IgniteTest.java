@@ -10,10 +10,12 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.MethodSorters;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.annotation.Transactional;
 
 import static org.junit.Assert.*;
 
@@ -28,6 +30,7 @@ public class IgniteTest {
     private UserRepository userRepository;
     @Autowired
     private PlatformTransactionManager transactionManager;
+    private static long userId;
 
     @Test
     public void crud() {
@@ -78,6 +81,26 @@ public class IgniteTest {
         assertNotEquals(-1, userId);
 
         transactionManager.rollback(transaction);
+        try {
+            userRepository.get(userId);
+            assertTrue(false);
+        } catch (NoSuchObject ignored) {
+        }
+    }
+
+    @Transactional
+    @Rollback
+    @Test
+    public void transactionalAnnotation1() {
+        User user = new User();
+        user.setName("Ivan Ivanov");
+        userRepository.save(user);
+        userId = user.getId();
+        assertNotEquals(-1, userId);
+    }
+
+    @Test
+    public void transactionalAnnotation2() {
         try {
             userRepository.get(userId);
             assertTrue(false);

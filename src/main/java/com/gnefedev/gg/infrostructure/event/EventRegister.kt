@@ -9,16 +9,11 @@ import org.springframework.stereotype.Component
  */
 @Component
 object EventRegister {
-
     @Autowired
-    fun setPublisher(injected: ApplicationEventPublisher) {
-        publisher = injected
-    }
-
-    private var publisher: ApplicationEventPublisher? = null
+    private lateinit var publisher: ApplicationEventPublisher;
 
     @JvmStatic
     fun <T : Event> fire(event: T) {
-        publisher!!.publishEvent(event)
+        publisher.publishEvent(event)
     }
 }
