@@ -1,6 +1,8 @@
 package com.gnefedev.gg.test;
 
 import com.gnefedev.gg.config.GGConfig;
+import com.gnefedev.gg.infrostructure.repository.NoSuchObject;
+import com.gnefedev.gg.infrostructure.repository.RepositoryRegister;
 import com.gnefedev.gg.user.UserRepository;
 import com.gnefedev.gg.user.model.User;
 import org.junit.FixMethodOrder;
@@ -29,40 +31,57 @@ public class IgniteTest {
 
     @Test
     public void crud() {
-        User user = new User().setName("Ivan Ivanov");
+        User user = new User();
+        user.setName("Ivan Ivanov");
         userRepository.save(user);
         assertNotEquals(-1, user.getId());
 
-        User fetched = userRepository.load(user.getId());
+        User fetched = userRepository.get(user.getId());
         assertEquals("Ivan Ivanov", fetched.getName());
 
         fetched.setName("Petr Petrov");
         userRepository.save(fetched);
 
-        fetched = userRepository.load(user.getId());
+        fetched = userRepository.get(user.getId());
         assertEquals("Petr Petrov", fetched.getName());
 
         userRepository.remove(fetched);
 
-        assertNull(userRepository.load(user.getId()));
+        try {
+            userRepository.get(user.getId());
+            assertTrue(false);
+        } catch (NoSuchObject ignored) {
+        }
+    }
+
+    @Test
+    public void repositoryRegister() {
+        User user = new User();
+        user.setName("Ivan Ivanov");
+        userRepository.save(user);
+        assertEquals(
+                "Ivan Ivanov",
+                RepositoryRegister
+                        .repository(user.getClass())
+                        .get(user.getId())
+                        .getName()
+        );
     }
 
     @Test
     public void transaction() {
         TransactionStatus transaction = transactionManager.getTransaction(null);
-        User firstUser = new User().setName("Ivan Ivanov");
-        userRepository.save(firstUser);
-        long firstUserId = firstUser.getId();
-        assertNotEquals(-1, firstUserId);
-
-        User secondUser = new User().setName("Sergei Ivanov");
-        userRepository.save(secondUser);
-        long secondUserId = secondUser.getId();
-        assertNotEquals(-1, secondUserId);
+        User user = new User();
+        user.setName("Ivan Ivanov");
+        userRepository.save(user);
+        long userId = user.getId();
+        assertNotEquals(-1, userId);
 
         transactionManager.rollback(transaction);
-
-        assertNull(userRepository.load(firstUserId));
-        assertNull(userRepository.load(secondUserId));
+        try {
+            userRepository.get(userId);
+            assertTrue(false);
+        } catch (NoSuchObject ignored) {
+        }
     }
 }
