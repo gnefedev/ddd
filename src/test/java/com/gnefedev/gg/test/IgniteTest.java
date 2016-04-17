@@ -8,7 +8,6 @@ import com.gnefedev.gg.infrostructure.repository.exception.NoTransactionInActive
 import com.gnefedev.gg.user.UserRepository;
 import com.gnefedev.gg.user.model.User;
 import org.junit.FixMethodOrder;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.MethodSorters;
@@ -128,7 +127,6 @@ public class IgniteTest {
         }
     }
 
-    @Ignore
     @Test
     public void referenceStore() {
         TransactionStatus transaction = transactionManager.getTransaction(null);
@@ -139,5 +137,20 @@ public class IgniteTest {
 
         assertTrue(user == userRepository.get(userId));
         transactionManager.commit(transaction);
+
+        transaction = transactionManager.getTransaction(null);
+
+        User fetched = userRepository.get(userId);
+        assertFalse(user == fetched);
+        userRepository.remove(fetched);
+
+        try {
+            userRepository.get(userId);
+            assertTrue(false);
+        } catch (NoSuchObject ignored) {
+        }
+
+        transactionManager.commit(transaction);
+
     }
 }

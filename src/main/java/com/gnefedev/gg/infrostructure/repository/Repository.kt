@@ -9,7 +9,10 @@ import org.apache.ignite.cache.CacheAtomicityMode
 import org.apache.ignite.configuration.CacheConfiguration
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.transaction.support.TransactionSynchronizationAdapter
+import org.springframework.transaction.support.TransactionSynchronizationManager
 import sun.org.mozilla.javascript.tools.idswitch.FileBody
+import java.util.*
 
 import javax.annotation.PostConstruct
 
@@ -21,8 +24,34 @@ abstract class Repository<T : RootEntity<*, *>> {
     private lateinit var ignite: Ignite
     @Autowired
     private lateinit var transactionManager: PlatformTransactionManager
-    private lateinit var cache: IgniteCache<Long, T>
+    private lateinit var cache: Cache<T>
     private lateinit var sequence: IgniteAtomicSequence
+
+    private class Cache<T>(val cache: IgniteCache<Long, T>) {
+        private val register: MutableMap<Long, T> = HashMap()
+        fun put(id: Long, entity: T) {
+            if (!register.containsKey(id)) {
+                register[id] = entity
+                TransactionSynchronizationManager.registerSynchronization(
+                        object : TransactionSynchronizationAdapter() {
+                            override fun afterCompletion(status: Int) {
+                                register.remove(id)
+                            }
+                        }
+                )
+            }
+            cache.put(id, entity)
+        }
+        fun get(id: Long): T? {
+            return register.getOrPut(id) {
+                cache.get(id)
+            }
+        }
+        fun remove(id: Long): Boolean {
+            register.remove(id)
+            return cache.remove(id);
+        }
+    }
 
     @PostConstruct
     fun registerCache() {
@@ -32,7 +61,7 @@ abstract class Repository<T : RootEntity<*, *>> {
                 Long::class.java, entityClass())
         cacheConfiguration.atomicityMode = CacheAtomicityMode.TRANSACTIONAL
 
-        cache = ignite.getOrCreateCache(cacheConfiguration)
+        cache = Cache(ignite.getOrCreateCache(cacheConfiguration))
         sequence = ignite.atomicSequence(entityClass().simpleName, 1, true)
     }
 
