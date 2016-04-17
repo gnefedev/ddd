@@ -19,6 +19,8 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 import static org.junit.Assert.*;
 
 /**
@@ -144,6 +146,19 @@ public class IgniteTest {
         } catch (NoSuchObject ignored) {
         }
 
+        transactionManager.commit(transaction);
+    }
+
+    @Test
+    public void sqlQuery() {
+        TransactionStatus transaction = transactionManager.getTransaction(null);
+        userRepository.save(new User("Ivan", "Ivanov"));
+        userRepository.save(new User("Petr", "Ivanov"));
+        transactionManager.commit(transaction);
+
+        transaction = transactionManager.getTransaction(null);
+        List<User> users = userRepository.findByFamilyName("Ivanov");
+        assertEquals(2, users.size());
         transactionManager.commit(transaction);
     }
 }

@@ -12,4 +12,8 @@ class UserRepository : Repository<User>() {
     override fun entityClass(): Class<User> {
         return User::class.java
     }
+
+    fun findByFamilyName(family: String): List<User> {
+        return getListByQuery("select * from User where familyName = ?", family);
+    }
 }
