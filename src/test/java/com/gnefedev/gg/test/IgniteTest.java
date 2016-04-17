@@ -37,19 +37,18 @@ public class IgniteTest {
     @Transactional
     @Test
     public void crud() {
-        User user = new User();
-        user.setName("Ivan Ivanov");
+        User user = new User("Ivan", "Ivanov");
         userRepository.save(user);
         assertNotEquals(-1, user.getId());
 
         User fetched = userRepository.get(user.getId());
-        assertEquals("Ivan Ivanov", fetched.getName());
+        assertEquals("Ivanov", fetched.getFamilyName());
 
-        fetched.setName("Petr Petrov");
+        fetched.setFamilyName("Petrov");
         userRepository.save(fetched);
 
         fetched = userRepository.get(user.getId());
-        assertEquals("Petr Petrov", fetched.getName());
+        assertEquals("Petrov", fetched.getFamilyName());
 
         userRepository.remove(fetched);
 
@@ -64,7 +63,6 @@ public class IgniteTest {
     public void workWithoutTransaction() {
         try {
             User user = new User();
-            user.setName("Ivan Ivanov");
             userRepository.save(user);
             assertTrue(false);
         } catch (NoTransactionInActive ignored) {
@@ -74,15 +72,14 @@ public class IgniteTest {
     @Transactional
     @Test
     public void repositoryRegister() {
-        User user = new User();
-        user.setName("Ivan Ivanov");
+        User user = new User("Ivan", "Ivanov");
         userRepository.save(user);
         assertEquals(
-                "Ivan Ivanov",
+                "Ivanov",
                 RepositoryRegister
                         .repository(User.class)
                         .get(user.getId())
-                        .getName()
+                        .getFamilyName()
         );
     }
 
@@ -90,7 +87,6 @@ public class IgniteTest {
     public void transaction() {
         TransactionStatus transaction = transactionManager.getTransaction(null);
         User user = new User();
-        user.setName("Ivan Ivanov");
         userRepository.save(user);
         EntityId<User> userId = user.getId();
         assertNotEquals(-1, userId);
@@ -111,7 +107,6 @@ public class IgniteTest {
     @Test
     public void transactionalAnnotation1() {
         User user = new User();
-        user.setName("Ivan Ivanov");
         userRepository.save(user);
         userId = user.getId();
         assertNotEquals(-1, userId);
@@ -131,7 +126,6 @@ public class IgniteTest {
     public void referenceStore() {
         TransactionStatus transaction = transactionManager.getTransaction(null);
         User user = new User();
-        user.setName("Ivan Ivanov");
         userRepository.save(user);
         EntityId<User> userId = user.getId();
 
@@ -151,6 +145,5 @@ public class IgniteTest {
         }
 
         transactionManager.commit(transaction);
-
     }
 }
