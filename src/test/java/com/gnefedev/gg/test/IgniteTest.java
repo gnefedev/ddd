@@ -2,8 +2,9 @@ package com.gnefedev.gg.test;
 
 import com.gnefedev.gg.config.GGConfig;
 import com.gnefedev.gg.infrostructure.repository.EntityId;
-import com.gnefedev.gg.infrostructure.repository.NoSuchObject;
 import com.gnefedev.gg.infrostructure.repository.RepositoryRegister;
+import com.gnefedev.gg.infrostructure.repository.exception.NoSuchObject;
+import com.gnefedev.gg.infrostructure.repository.exception.NoTransactionInActive;
 import com.gnefedev.gg.user.UserRepository;
 import com.gnefedev.gg.user.model.User;
 import org.junit.FixMethodOrder;
@@ -33,6 +34,7 @@ public class IgniteTest {
     private PlatformTransactionManager transactionManager;
     private static EntityId<User> userId;
 
+    @Transactional
     @Test
     public void crud() {
         User user = new User();
@@ -59,6 +61,18 @@ public class IgniteTest {
     }
 
     @Test
+    public void workWithoutTransaction() {
+        try {
+            User user = new User();
+            user.setName("Ivan Ivanov");
+            userRepository.save(user);
+            assertTrue(false);
+        } catch (NoTransactionInActive ignored) {
+        }
+    }
+
+    @Transactional
+    @Test
     public void repositoryRegister() {
         User user = new User();
         user.setName("Ivan Ivanov");
@@ -82,11 +96,14 @@ public class IgniteTest {
         assertNotEquals(-1, userId);
 
         transactionManager.rollback(transaction);
+
+        transaction = transactionManager.getTransaction(null);
         try {
             userRepository.get(userId);
             assertTrue(false);
         } catch (NoSuchObject ignored) {
         }
+        transactionManager.rollback(transaction);
     }
 
     @Transactional
@@ -100,6 +117,7 @@ public class IgniteTest {
         assertNotEquals(-1, userId);
     }
 
+    @Transactional
     @Test
     public void transactionalAnnotation2() {
         try {

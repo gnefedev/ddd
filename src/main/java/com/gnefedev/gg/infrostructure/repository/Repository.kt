@@ -1,11 +1,15 @@
 package com.gnefedev.gg.infrostructure.repository
 
+import com.gnefedev.gg.infrostructure.repository.exception.NoSuchObject
+import com.gnefedev.gg.infrostructure.repository.exception.NoTransactionInActive
 import org.apache.ignite.Ignite
 import org.apache.ignite.IgniteAtomicSequence
 import org.apache.ignite.IgniteCache
 import org.apache.ignite.cache.CacheAtomicityMode
 import org.apache.ignite.configuration.CacheConfiguration
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.transaction.PlatformTransactionManager
+import sun.org.mozilla.javascript.tools.idswitch.FileBody
 
 import javax.annotation.PostConstruct
 
@@ -15,6 +19,8 @@ import javax.annotation.PostConstruct
 abstract class Repository<T : RootEntity<*, *>> {
     @Autowired
     private lateinit var ignite: Ignite
+    @Autowired
+    private lateinit var transactionManager: PlatformTransactionManager
     private lateinit var cache: IgniteCache<Long, T>
     private lateinit var sequence: IgniteAtomicSequence
 
@@ -32,19 +38,34 @@ abstract class Repository<T : RootEntity<*, *>> {
 
     internal abstract fun entityClass(): Class<T>
 
-    fun save(entity: T): T {
-        if (entity.id.id == -1L) {
-            entity.id.id = sequence.andIncrement
+    private inline fun <T> inTransaction(body: () -> T): T {
+        val transaction = transactionManager.getTransaction(null)
+        if (transaction.isNewTransaction) {
+            transactionManager.rollback(transaction)
+            throw NoTransactionInActive();
         }
-        cache.put(entity.id.id, entity)
-        return entity
+        return body();
+    }
+
+    fun save(entity: T): T {
+        inTransaction {
+            if (!entity.saved) {
+                entity.id.id = sequence.andIncrement
+            }
+            cache.put(entity.id.id, entity)
+            return entity
+        }
     }
 
     fun get(id: EntityId<T>): T {
-        return cache.get(id.id)?:throw NoSuchObject()
+        inTransaction {
+            return cache.get(id.id) ?: throw NoSuchObject()
+        }
     }
 
     fun remove(entity: T) {
-        cache.remove(entity.id.id)
+        inTransaction {
+            cache.remove(entity.id.id)
+        }
     }
 }
