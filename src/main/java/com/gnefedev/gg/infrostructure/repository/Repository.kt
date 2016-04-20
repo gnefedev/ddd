@@ -27,22 +27,22 @@ abstract class Repository<T : RootEntity<T, EntityId<T>>> {
     private lateinit var cache: CacheProxy<T>
     private lateinit var sequence: IgniteAtomicSequence
 
-    private class CacheProxy<T>(val cache: IgniteCache<Long, T>) {
+    private class CacheProxy<T>(val cache: IgniteCache<Long, T>) : IgniteCache<Long, T> by cache {
         var register: MutableMap<Long, T> = HashMap()
-        fun put(id: Long, entity: T) {
+        override fun put(id: Long, entity: T) {
             if (!register.containsKey(id)) {
                 register[id] = entity
             }
             cache.put(id, entity)
         }
 
-        fun get(id: Long): T? {
+        override fun get(id: Long): T? {
             return register.getOrPut(id) {
                 cache.get(id)
             }
         }
 
-        fun remove(id: Long): Boolean {
+        override fun remove(id: Long): Boolean {
             register.remove(id)
             return cache.remove(id);
         }

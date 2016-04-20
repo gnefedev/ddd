@@ -13,7 +13,7 @@ import java.util.Map;
  */
 public class OrderList extends RootEntity<OrderList, EntityId<OrderList>> {
     public void fix() {
-        status = Status.FIXED.name();
+        status = Status.FIXED;
     }
 
     public void recalculate(EntityId<Item> itemId, double price) {
@@ -28,13 +28,13 @@ public class OrderList extends RootEntity<OrderList, EntityId<OrderList>> {
     }
 
     public boolean isFixed() {
-        return status.equals(Status.FIXED.name());
+        return status.equals(Status.FIXED);
     }
-    @QuerySqlField
-    private String status = Status.NEW.name();
+    @QuerySqlField(index = true)
+    private Status status = Status.NEW;
     private double sum = 0.0;
     private Map<EntityId<Item>, OrderLine> orderLines = new HashMap<>();
-    @QuerySqlField
+    @QuerySqlField(index = true)
     private final Long userId;
 
     public OrderList(EntityId<User> userId) {

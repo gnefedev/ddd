@@ -16,11 +16,13 @@ public class OrderRepository extends RepositoryForJava<OrderList> {
         return OrderList.class;
     }
 
-    public OrderList findByUser(EntityId<User> ivanId) {
-        return getListByQuery("Select * from OrderList where userId = ?", ivanId.getId()).get(0);
+    public OrderList findByUser(EntityId<User> userId) {
+        //FIXME userId.getId() -> userId OR userId = ? -> userId.id = ?
+        return getListByQuery("Select * from OrderList where userId = ?", userId.getId()).get(0);
     }
 
     public void transformNotFixed(final EntityTransformer<OrderList> entityTransformer) {
+        //FIXME * -> _key
         invokeOnQuery(entityTransformer, "Select * from OrderList where status = ?", OrderList.Status.NEW.name());
     }
 }
