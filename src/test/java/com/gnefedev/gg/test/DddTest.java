@@ -2,9 +2,14 @@ package com.gnefedev.gg.test;
 
 import com.gnefedev.gg.config.GGConfig;
 import com.gnefedev.gg.delivery.Address;
+import com.gnefedev.gg.delivery.DeliveryRepository;
+import com.gnefedev.gg.delivery.DeliveryService;
 import com.gnefedev.gg.infrostructure.repository.EntityId;
+import com.gnefedev.gg.shop.Item;
+import com.gnefedev.gg.shop.ItemRepository;
 import com.gnefedev.gg.shop.OrderList;
 import com.gnefedev.gg.shop.OrderRepository;
+import com.gnefedev.gg.shop.Shop;
 import com.gnefedev.gg.user.User;
 import com.gnefedev.gg.user.UserRepository;
 import org.junit.FixMethodOrder;
@@ -17,7 +22,10 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.transaction.annotation.Transactional;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Created by gerakln on 17.04.16.
@@ -30,7 +38,17 @@ public class DddTest {
     private UserRepository userRepository;
     @Autowired
     private OrderRepository orderRepository;
+    @Autowired
+    private ItemRepository itemRepository;
+    @Autowired
+    private DeliveryRepository deliveryRepository;
+    @Autowired
+    private DeliveryService deliveryService;
+    @Autowired
+    private Shop shop;
     private static EntityId<User> ivanId;
+    private static EntityId<Item> pencilId;
+    private static EntityId<Item> monitorId;
 
     @Test
     @Transactional
@@ -48,10 +66,69 @@ public class DddTest {
 
     @Test
     @Transactional
-    public void _02createOrder() {
+    @Rollback(false)
+    public void _02createItems() {
+        Item pencil = new Item("pencil", 10.0);
+        itemRepository.save(pencil);
+        pencilId = pencil.getId();
+
+        Item monitor = new Item("monitor", 1000.0);
+        itemRepository.save(monitor);
+        monitorId = monitor.getId();
+    }
+
+    @Test
+    @Transactional
+    @Rollback(false)
+    public void _03createOrder() {
+        EntityId<OrderList> orderId = shop.createNewOrder(ivanId);
+        OrderList order = orderRepository.get(orderId);
+        assertNotNull(order);
+
+        order.buy(itemRepository.get(pencilId), 10);
+        assertEquals(100.0, order.getSum(), 0.0);
+
+        order.buy(itemRepository.get(monitorId), 1);
+        assertEquals(1100.0, order.getSum(), 0.0);
+
+        order.buy(itemRepository.get(pencilId), 20);
+        assertEquals(1200.0, order.getSum(), 0.0);
+
+        orderRepository.save(order);
+    }
+
+    @Test
+    @Transactional
+    @Rollback(false)
+    public void _04changePrice() {
+        Item monitor = itemRepository.get(monitorId);
+        monitor.setPrice(2000.0);
+        itemRepository.save(monitor);
+    }
+
+    @Test
+    @Transactional
+    public void _05checkOrder() {
+        OrderList order = orderRepository.findByUser(ivanId);
+        assertEquals(2200.0, order.getSum(), 0.0);
+    }
+
+
+    @Test
+    @Transactional
+    @Rollback(false)
+    public void _06createDelivery() {
         User ivan = userRepository.get(ivanId);
-        EntityId<OrderList> orderId = ivan.newOrder();
-        assertNotNull(orderRepository.get(orderId));
+        OrderList order = orderRepository.findByUser(ivanId);
+        deliveryService.newDelivery(order.getId(), ivan.getDefaultAddress());
+        assertFalse(order.isFixed());
+    }
+
+    @Test
+    @Transactional
+    public void _07checkOrder() {
+        OrderList order = orderRepository.findByUser(ivanId);
+        assertTrue(order.isFixed());
     }
 
     @Test

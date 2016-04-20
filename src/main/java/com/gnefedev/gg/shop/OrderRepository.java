@@ -1,8 +1,9 @@
 package com.gnefedev.gg.shop;
 
 import com.gnefedev.gg.infrostructure.repository.EntityId;
+import com.gnefedev.gg.infrostructure.repository.EntityTransformer;
 import com.gnefedev.gg.infrostructure.repository.RepositoryForJava;
-import com.gnefedev.gg.infrostructure.repository.RepositoryRegister;
+import com.gnefedev.gg.user.User;
 import org.springframework.stereotype.Component;
 
 /**
@@ -15,9 +16,11 @@ public class OrderRepository extends RepositoryForJava<OrderList> {
         return OrderList.class;
     }
 
-    public static EntityId<OrderList> createNewOrder() {
-        OrderList orderList = new OrderList();
-        RepositoryRegister.repository(OrderList.class).save(orderList);
-        return orderList.getId();
+    public OrderList findByUser(EntityId<User> ivanId) {
+        return getListByQuery("Select * from OrderList where userId = ?", ivanId.getId()).get(0);
+    }
+
+    public void transformNotFixed(final EntityTransformer<OrderList> entityTransformer) {
+        invokeOnQuery(entityTransformer, "Select * from OrderList where status = ?", OrderList.Status.NEW.name());
     }
 }

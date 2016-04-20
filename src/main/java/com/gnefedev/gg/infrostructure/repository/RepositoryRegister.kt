@@ -12,11 +12,11 @@ import java.util.HashMap
 object RepositoryRegister {
 
     @Autowired
-    fun registerRepositories(repositories: List<Repository<out RootEntity<*,*>>>) {
+    fun registerRepositories(repositories: List<Repository<*>>) {
         repositories.forEach { register.put(it.entityClass(), it) }
     }
 
-    private val register: MutableMap<Class<out RootEntity<*, *>>, Repository<out RootEntity<*, *>>> = HashMap()
+    private val register: MutableMap<Class<out RootEntity<*, *>>, Repository<*>> = HashMap()
     @JvmStatic
     fun <T : RootEntity<T,EntityId<T>>> repository(clazz: Class<T>): Repository<T> {
         @Suppress("UNCHECKED_CAST")

@@ -14,11 +14,12 @@ import org.springframework.transaction.support.TransactionSynchronizationAdapter
 import org.springframework.transaction.support.TransactionSynchronizationManager
 import java.util.*
 import javax.annotation.PostConstruct
+import javax.cache.processor.EntryProcessor
 
 /**
  * Created by SBT-Nefedev-GV on 15.04.2016.
  */
-abstract class Repository<T : RootEntity<*, *>> {
+abstract class Repository<T : RootEntity<T, EntityId<T>>> {
     @Autowired
     private lateinit var ignite: Ignite
     @Autowired
@@ -57,6 +58,15 @@ abstract class Repository<T : RootEntity<*, *>> {
                 cursor.close()
             }
         }
+
+        fun invokeOnQuery(query: SqlQuery<Long, T>, entryProcessor: EntryProcessor<Long, T, T>) {
+            val cursor = cache.query(query)
+            try {
+                cache.invokeAll<T>(cursor.map { it.key }.toSet(), entryProcessor)
+            } finally {
+                cursor.close()
+            }
+        }
     }
 
     @PostConstruct
@@ -88,12 +98,13 @@ abstract class Repository<T : RootEntity<*, *>> {
         return body();
     }
 
-    fun save(entity: T) {
+    fun save(entity: T): EntityId<T> {
         inTransaction {
             if (!entity.saved) {
                 entity.id.id = sequence.andIncrement
             }
             cache.put(entity.id.id, entity)
+            return entity.id;
         }
     }
 
@@ -108,11 +119,24 @@ abstract class Repository<T : RootEntity<*, *>> {
             cache.remove(entity.id.id)
         }
     }
+    fun remove(entityId: EntityId<T>) {
+        inTransaction {
+            cache.remove(entityId.id)
+        }
+    }
 
-    protected fun getListByQuery(sqlQuery: String, vararg args: String): List<T> {
+    protected fun getListByQuery(sqlQuery: String, vararg args: Any): List<T> {
         inTransaction {
             val sql: SqlQuery<Long, T> = SqlQuery(entityClass(), sqlQuery);
             return cache.getList(sql.setArgs(args))
         }
+    }
+
+    protected fun invokeOnQuery(entityTransformer: EntityTransformer<T>, sqlQuery: String, vararg args: Any) {
+        val sql: SqlQuery<Long, T> = SqlQuery(entityClass(), sqlQuery);
+        cache.invokeOnQuery(sql.setArgs(args), EntryProcessor { mutableEntry, args ->
+            mutableEntry.value = entityTransformer.transform(mutableEntry.value)
+            null
+        })
     }
 }
