@@ -128,7 +128,7 @@ abstract class Repository<T : RootEntity<T, EntityId<T>>> {
     protected fun getListByQuery(sqlQuery: String, vararg args: Any): List<T> {
         inTransaction {
             val sql: SqlQuery<Long, T> = SqlQuery(entityClass(), sqlQuery);
-            return cache.getList(sql.setArgs(args))
+            return cache.getList(sql.setArgs(*args))
         }
     }
 

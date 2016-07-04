@@ -2,14 +2,9 @@ package com.gnefedev.gg.test;
 
 import com.gnefedev.gg.config.GGConfig;
 import com.gnefedev.gg.delivery.Address;
-import com.gnefedev.gg.delivery.DeliveryRepository;
 import com.gnefedev.gg.delivery.DeliveryService;
 import com.gnefedev.gg.infrostructure.repository.EntityId;
-import com.gnefedev.gg.shop.Item;
-import com.gnefedev.gg.shop.ItemRepository;
-import com.gnefedev.gg.shop.OrderList;
-import com.gnefedev.gg.shop.OrderRepository;
-import com.gnefedev.gg.shop.Shop;
+import com.gnefedev.gg.shop.*;
 import com.gnefedev.gg.user.User;
 import com.gnefedev.gg.user.UserRepository;
 import org.junit.FixMethodOrder;
@@ -22,10 +17,7 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.transaction.annotation.Transactional;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 /**
  * Created by gerakln on 17.04.16.
@@ -40,8 +32,6 @@ public class DddTest {
     private OrderRepository orderRepository;
     @Autowired
     private ItemRepository itemRepository;
-    @Autowired
-    private DeliveryRepository deliveryRepository;
     @Autowired
     private DeliveryService deliveryService;
     @Autowired

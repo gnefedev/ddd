@@ -12,19 +12,16 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.MethodSorters;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.TransactionSuspensionNotSupportedException;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 /**
  * Created by SBT-Nefedev-GV on 15.04.2016.
@@ -37,6 +34,8 @@ public class IgniteTest {
     private UserRepository userRepository;
     @Autowired
     private PlatformTransactionManager transactionManager;
+    @Autowired
+    private TransactionalBean transactionalBean;
     private static EntityId<User> userId;
 
     @Transactional
@@ -108,7 +107,6 @@ public class IgniteTest {
     }
 
     @Transactional
-    @Rollback
     @Test
     public void transactionalAnnotation1() {
         User user = new User();
@@ -167,6 +165,15 @@ public class IgniteTest {
         assertEquals(2, users.size());
         assertEquals("Ivan", users.get(0).getName());
         assertTrue(ivan == users.get(0));
+
+        User petr = userRepository.findByNameAndFamily("Petr", "Ivanov");
+        assertNotNull(petr);
         transactionManager.commit(transaction);
+    }
+
+    @Test(expected = TransactionSuspensionNotSupportedException.class)
+    @Transactional
+    public void transactionalRequireNew() {
+        transactionalBean.requireNew();
     }
 }
