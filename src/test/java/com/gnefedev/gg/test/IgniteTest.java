@@ -7,10 +7,10 @@ import com.gnefedev.gg.infrostructure.repository.exception.NoSuchObject;
 import com.gnefedev.gg.infrostructure.repository.exception.NoTransactionInActive;
 import com.gnefedev.gg.user.User;
 import com.gnefedev.gg.user.UserRepository;
-import org.junit.FixMethodOrder;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.junit.runners.MethodSorters;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
@@ -28,7 +28,6 @@ import static org.junit.Assert.*;
  */
 @ContextConfiguration(classes = GGConfig.class)
 @RunWith(SpringJUnit4ClassRunner.class)
-@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class IgniteTest {
     @Autowired
     private UserRepository userRepository;
@@ -36,7 +35,16 @@ public class IgniteTest {
     private PlatformTransactionManager transactionManager;
     @Autowired
     private TransactionalBean transactionalBean;
-    private static EntityId<User> userId;
+
+    @Before
+    @After
+    public void clear() {
+        TransactionStatus transaction = transactionManager.getTransaction(null);
+        for (User user : userRepository.findByFamilyName("Ivanov")) {
+            userRepository.remove(user);
+        }
+        transactionManager.commit(transaction);
+    }
 
     @Transactional
     @Test
@@ -48,11 +56,11 @@ public class IgniteTest {
         User fetched = userRepository.get(user.getId());
         assertEquals("Ivanov", fetched.getFamilyName());
 
-        fetched.setFamilyName("Petrov");
+        fetched.setAge(25);
         userRepository.save(fetched);
 
         fetched = userRepository.get(user.getId());
-        assertEquals("Petrov", fetched.getFamilyName());
+        assertEquals(25, fetched.getAge());
 
         userRepository.remove(fetched);
 
@@ -66,7 +74,7 @@ public class IgniteTest {
     @Test
     public void workWithoutTransaction() {
         try {
-            User user = new User();
+            User user = new User("Ivan", "Ivanov");
             userRepository.save(user);
             assertTrue(false);
         } catch (NoTransactionInActive ignored) {
@@ -90,7 +98,7 @@ public class IgniteTest {
     @Test
     public void transaction() {
         TransactionStatus transaction = transactionManager.getTransaction(null);
-        User user = new User();
+        User user = new User("Ivan", "Ivanov");
         userRepository.save(user);
         EntityId<User> userId = user.getId();
         assertNotEquals(-1, userId);
@@ -106,29 +114,10 @@ public class IgniteTest {
         transactionManager.rollback(transaction);
     }
 
-    @Transactional
-    @Test
-    public void transactionalAnnotation1() {
-        User user = new User();
-        userRepository.save(user);
-        userId = user.getId();
-        assertNotEquals(-1, userId);
-    }
-
-    @Transactional
-    @Test
-    public void transactionalAnnotation2() {
-        try {
-            userRepository.get(userId);
-            assertTrue(false);
-        } catch (NoSuchObject ignored) {
-        }
-    }
-
     @Test
     public void referenceStore() {
         TransactionStatus transaction = transactionManager.getTransaction(null);
-        User user = new User();
+        User user = new User("Ivan", "Ivanov");
         userRepository.save(user);
         EntityId<User> userId = user.getId();
 

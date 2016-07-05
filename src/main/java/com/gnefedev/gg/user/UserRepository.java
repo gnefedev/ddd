@@ -1,7 +1,10 @@
 package com.gnefedev.gg.user;
 
+import com.gnefedev.gg.infrostructure.repository.EntityId;
+import com.gnefedev.gg.infrostructure.repository.GGConstraintCoordinator;
 import com.gnefedev.gg.infrostructure.repository.GGLock;
 import com.gnefedev.gg.infrostructure.repository.RepositoryForJava;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -14,6 +17,9 @@ import java.util.List;
 public class UserRepository extends RepositoryForJava<User> {
     @Autowired
     private GGLock ggLock;
+    @Autowired
+    private GGConstraintCoordinator constraintCoordinator;
+
     @Override
     protected Class<User> entityClass() {
         return User.class;
@@ -34,16 +40,11 @@ public class UserRepository extends RepositoryForJava<User> {
         }
     }
 
-    public User findOrCreateUser(String name, String family) {
-        if (ggLock.lock("User-" + name + "-" + family)) {
-            User user = findByNameAndFamily(name, family);
-            if (user == null) {
-                user = new User(name, family);
-                save(user);
-            }
-            return user;
-        } else {
-            throw new RuntimeException("Невозможно получить лок");
-        }
+    @NotNull
+    @Override
+    public EntityId<User> save(@NotNull User entity) {
+        EntityId<User> entityId = super.save(entity);
+        constraintCoordinator.checkConstraint(entity);
+        return entityId;
     }
 }

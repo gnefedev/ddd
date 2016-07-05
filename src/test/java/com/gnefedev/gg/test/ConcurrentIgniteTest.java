@@ -2,8 +2,10 @@ package com.gnefedev.gg.test;
 
 import com.gnefedev.gg.config.GGConfig;
 import com.gnefedev.gg.infrostructure.repository.GGLock;
+import com.gnefedev.gg.infrostructure.repository.exception.ConstraintError;
 import com.gnefedev.gg.user.User;
 import com.gnefedev.gg.user.UserRepository;
+import org.jetbrains.annotations.NotNull;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -14,6 +16,8 @@ import org.springframework.context.support.AbstractApplicationContext;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.cache.CacheException;
@@ -29,10 +33,13 @@ import static org.junit.Assert.*;
 @RunWith(SpringJUnit4ClassRunner.class)
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class ConcurrentIgniteTest {
+    public static final int FIVE_SECONDS = 5000;
     @Autowired
     private GGLock ggLock;
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private PlatformTransactionManager transactionManager;
     private String name = "Ivan";
     private String family = "Ivanov";
 
@@ -50,11 +57,14 @@ public class ConcurrentIgniteTest {
     @Test
     @Transactional
     public void customLock() {
-        boolean acquired = ggLock.lock("key");
-        assertTrue(acquired);
-        assertFalse(ggLock.lock("key"));
-        runMain("tryCustomLock");
-        ggLock.unlock("key");
+        try {
+            boolean acquired = ggLock.lock("key");
+            assertTrue(acquired);
+            assertFalse(ggLock.lock("key"));
+            runMain("tryCustomLock");
+        } finally {
+            ggLock.unlock("key");
+        }
     }
 
     @Transactional
@@ -64,13 +74,16 @@ public class ConcurrentIgniteTest {
     }
 
     @Test
-    @Transactional
-    @Rollback(false)
-    public void _00uniqueUser() {
+    public void _00uniqueUser() throws InterruptedException {
+        TransactionStatus transaction = transactionManager.getTransaction(null);
         assertNull(userRepository.findByNameAndFamily(name, family));
-        assertNotNull(userRepository.findOrCreateUser(name, family));
-        runMain("tryCreateIvan");
-        assertNull(userRepository.findByNameAndFamily(name, family));
+        userRepository.save(new User(name, family));
+        Process process = getProcess("tryCreateIvan");
+        Thread.sleep(FIVE_SECONDS);
+        assertTrue(process.isAlive());
+        transactionManager.commit(transaction);
+        process.waitFor();
+        assertEquals(0, process.exitValue());
     }
 
     @Test
@@ -82,19 +95,21 @@ public class ConcurrentIgniteTest {
         userRepository.remove(ivan);
     }
 
-    @Transactional
     public void tryCreateIvan() {
+        TransactionStatus transaction = transactionManager.getTransaction(null);
         try {
             assertNull(userRepository.findByNameAndFamily(name, family));
-            userRepository.findOrCreateUser(name, family);
+            userRepository.save(new User(name, family));
             fail();
-        } catch (Exception ignored) {
+        } catch (ConstraintError ignored) {
+            transactionManager.rollback(transaction);
         }
     }
 
     public static void main(String[] args) {
         try (AbstractApplicationContext context = new AnnotationConfigApplicationContext(GGConfig.class, ConcurrentIgniteTest.class)) {
             ConcurrentIgniteTest concurrentIgniteTest = context.getBean(ConcurrentIgniteTest.class);
+            System.out.println("Context was initialized");
             switch (args[0]) {
                 case "tryCustomLock":
                     concurrentIgniteTest.tryCustomLock();
@@ -109,6 +124,27 @@ public class ConcurrentIgniteTest {
     }
 
     private void runMain(String methodToRun) {
+        Process process = getProcess(methodToRun);
+        try {
+            process.waitFor();
+            assertEquals(0, process.exitValue());
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @NotNull
+    private Process getProcess(String methodToRun) {
+        ProcessBuilder builder = getProcessBuilder(methodToRun);
+        try {
+            return builder.start();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @NotNull
+    private ProcessBuilder getProcessBuilder(String methodToRun) {
         String javaHome = System.getProperty("java.home");
         String javaBin = javaHome +
                 File.separator + "bin" +
@@ -118,13 +154,8 @@ public class ConcurrentIgniteTest {
 
         ProcessBuilder builder = new ProcessBuilder(
                 javaBin, "-cp", classpath, className, methodToRun);
-
-        try {
-            Process process = builder.start();
-            process.waitFor();
-            assertEquals(0, process.exitValue());
-        } catch (IOException | InterruptedException e) {
-            throw new RuntimeException(e);
-        }
+        builder.redirectOutput(ProcessBuilder.Redirect.INHERIT);
+        builder.redirectError(ProcessBuilder.Redirect.INHERIT);
+        return builder;
     }
 }

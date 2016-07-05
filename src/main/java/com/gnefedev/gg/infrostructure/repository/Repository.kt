@@ -98,7 +98,7 @@ abstract class Repository<T : RootEntity<T, EntityId<T>>> {
         return body();
     }
 
-    fun save(entity: T): EntityId<T> {
+    open fun save(entity: T): EntityId<T> {
         inTransaction {
             if (!entity.saved) {
                 entity.id.id = sequence.andIncrement
@@ -114,6 +114,12 @@ abstract class Repository<T : RootEntity<T, EntityId<T>>> {
         }
     }
 
+    fun getOrNull(id: EntityId<T>): T? {
+        inTransaction {
+            return cache.get(id.id)
+        }
+    }
+
     fun remove(entity: T) {
         inTransaction {
             cache.remove(entity.id.id)
@@ -124,6 +130,8 @@ abstract class Repository<T : RootEntity<T, EntityId<T>>> {
             cache.remove(entityId.id)
         }
     }
+
+    fun clear() = cache.clear()
 
     protected fun getListByQuery(sqlQuery: String, vararg args: Any): List<T> {
         inTransaction {

@@ -2,6 +2,7 @@ package com.gnefedev.gg.user;
 
 import com.gnefedev.gg.delivery.Address;
 import com.gnefedev.gg.infrostructure.repository.EntityId;
+import com.gnefedev.gg.infrostructure.repository.GGConstraint;
 import com.gnefedev.gg.infrostructure.repository.RootEntity;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
 
@@ -11,11 +12,17 @@ import java.util.List;
 /**
  * Created by gerakln on 17.04.16.
  */
+@GGConstraint({
+        "name",
+        "familyName"
+})
 public class User extends RootEntity<User, EntityId<User>> {
     @QuerySqlField
     private String name;
     @QuerySqlField
     private String familyName;
+
+    private int age = 18;
 
     private List<Address> addresses = new ArrayList<>();
 
@@ -49,5 +56,13 @@ public class User extends RootEntity<User, EntityId<User>> {
 
     public void setFamilyName(String familyName) {
         this.familyName = familyName;
+    }
+
+    public void setAge(int age) {
+        this.age = age;
+    }
+
+    public int getAge() {
+        return age;
     }
 }
