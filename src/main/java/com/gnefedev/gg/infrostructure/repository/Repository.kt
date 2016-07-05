@@ -114,9 +114,9 @@ abstract class Repository<T : RootEntity<T, EntityId<T>>> {
         }
     }
 
-    fun getOrNull(id: EntityId<T>): T? {
+    fun contains(id: EntityId<T>): Boolean {
         inTransaction {
-            return cache.get(id.id)
+            return cache.containsKey(id.id)
         }
     }
 

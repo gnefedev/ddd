@@ -11,10 +11,10 @@ class GGConstraintCoordinator(val cache: IgniteCache<String, EntityId<*>>) {
     fun checkConstraint(user: User) {
         val id = cache.getAndPut(getKey(user), user.id)
         if (id != null && id != user.id) {
-            val oldUser = RepositoryRegister
+            val oldUserExists = RepositoryRegister
                     .repository(user.javaClass)
-                    .getOrNull(id as EntityId<User>)
-            if (oldUser != null) {
+                    .contains(id as EntityId<User>)
+            if (oldUserExists) {
                 throw ConstraintError()
             }
         }
